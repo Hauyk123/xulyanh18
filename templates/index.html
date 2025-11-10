@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="vi" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đề tài 3: Phân đoạn ảnh Thông minh</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        .card {
+            background-color: white;
+            border-radius: 1rem; /* rounded-xl */
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            transition: all 0.3s ease-in-out;
+        }
+        .card:hover {
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            transform: translateY(-5px);
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px; /* rounded-full */
+            font-weight: 600;
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-primary {
+            background-color: #4f46e5; /* indigo-600 */
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #4338ca; /* indigo-700 */
+        }
+        .btn-secondary {
+            background-color: #10b981; /* emerald-500 */
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: #059669; /* emerald-600 */
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <div class="container mx-auto px-4 py-8 md:py-12 max-w-6xl">
+
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight">Trình Phân đoạn ảnh</h1>
+            <p class="text-lg text-slate-600 mt-3 max-w-2xl mx-auto">Tải lên một bức ảnh và áp dụng các thuật toán K-Means hoặc Otsu để tách nền và đối tượng một cách thông minh.</p>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="mb-8 space-y-4">
+              {% for category, message in messages %}
+                {% if category == 'error' %}
+                  <div class="bg-red-100 border-l-4 border-red-500 text-red-800 p-4 rounded-r-lg" role="alert">
+                    <p class="font-bold">Đã xảy ra lỗi</p>
+                    <p>{{ message }}</p>
+                  </div>
+                {% elif category == 'warning' %}
+                  <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded-r-lg" role="alert">
+                    <p class="font-bold">Cảnh báo</p>
+                    <p>{{ message }}</p>
+                  </div>
+                {% else %}
+                  <div class="bg-green-100 border-l-4 border-green-500 text-green-800 p-4 rounded-r-lg" role="alert">
+                    <p class="font-bold">Thành công</p>
+                    <p>{{ message }}</p>
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <div class="card p-6 md:p-8 mb-12">
+            <form method="POST" enctype="multipart/form-data">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+                    <div class="lg:col-span-5">
+                        <label class="text-xl font-semibold mb-3 flex items-center gap-2">
+                            <i data-lucide="image-up"></i>
+                            1. Tải ảnh lên
+                        </label>
+                        <label for="file-upload" id="drop-zone" class="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                            <div id="drop-zone-content" class="flex flex-col items-center justify-center text-center px-2">
+                                <i data-lucide="cloud-upload" class="w-10 h-10 mb-3 text-slate-400"></i>
+                                <p class="mb-2 text-sm text-slate-500"><span class="font-semibold">Nhấn để chọn file</span> hoặc kéo thả</p>
+                                <p class="text-xs text-slate-500">PNG, JPG, BMP (Tối đa 16MB)</p>
+                            </div>
+                            <input id="file-upload" name="file" type="file" required class="hidden">
+                        </label>
+                    </div>
+
+                    <div class="lg:col-span-4">
+                        <h3 class="text-xl font-semibold mb-3 flex items-center gap-2">
+                           <i data-lucide="settings-2"></i>
+                           2. Tùy chọn
+                        </h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center p-3 rounded-lg bg-slate-50">
+                                <input id="check-kmeans" name="algorithms" value="kmeans" type="checkbox" checked class="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                <label for="check-kmeans" class="ml-3 font-medium text-slate-700">Phân đoạn K-Means</label>
+                            </div>
+                            <div class="pl-8">
+                                 <label for="k-value" class="text-sm font-medium text-slate-600">Số cụm (K):</label>
+                                 <input type="number" name="k_value" id="k-value" value="3" min="2" class="mt-1 w-24 rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2">
+                            </div>
+                            <div class="flex items-center p-3 rounded-lg bg-slate-50">
+                                <input id="check-otsu" name="algorithms" value="otsu" type="checkbox" class="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                <label for="check-otsu" class="ml-3 font-medium text-slate-700">Phân đoạn Otsu</U>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-3 flex items-center lg:items-end h-full">
+                         <button type="submit" class="btn btn-primary w-full">
+                             <i data-lucide="wand-sparkles"></i>
+                             Xử lý ảnh
+                         </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        {% if results %}
+        <div id="results">
+            <h2 class="text-3xl font-bold text-center mb-8">Kết quả Phân đoạn</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+                <div class="card flex flex-col">
+                    <div class="p-5 border-b border-slate-100"><h3 class="font-bold text-xl text-slate-800">Ảnh gốc</h3></div>
+                    <div class="p-5 flex-grow flex items-center justify-center min-h-[200px]">
+                        <img src="{{ results.original }}" alt="Ảnh gốc" class="max-w-full max-h-80 rounded-lg object-contain">
+                    </div>
+                    <div class="p-5 bg-slate-50 border-t border-slate-100 mt-auto">
+                        <a href="{{ results.original }}" download class="btn bg-slate-600 hover:bg-slate-700 text-white w-full">
+                           <i data-lucide="download"></i> Tải về
+                        </a>
+                    </div>
+                </div>
+
+                {% if results.kmeans %}
+                <div class="card flex flex-col">
+                    <div class="p-5 border-b border-slate-100"><h3 class="font-bold text-xl text-slate-800">Kết quả K-Means (K={{ results.k_value }})</h3></div>
+                    <div class="p-5 flex-grow flex items-center justify-center min-h-[200px]">
+                        <img src="{{ results.kmeans.img_path }}" alt="Kết quả K-Means" class="max-w-full max-h-80 rounded-lg object-contain">
+                    </div>
+                    <div class="p-5 bg-slate-50 border-t border-slate-100 mt-auto">
+                        <a href="{{ results.kmeans.img_path }}" download class="btn btn-secondary w-full">
+                           <i data-lucide="image-down"></i> Tải ảnh PNG
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if results.otsu %}
+                <div class="card flex flex-col">
+                     <div class="p-5 border-b border-slate-100"><h3 class="font-bold text-xl text-slate-800">Kết quả Otsu</h3></div>
+                     <div class="p-5 flex-grow flex items-center justify-center min-h-[200px]">
+                         <img src="{{ results.otsu.img_path }}" alt="Kết quả Otsu" class="max-w-full max-h-80 rounded-lg object-contain">
+                     </div>
+                     <div class="p-5 bg-slate-50 border-t border-slate-100 mt-auto flex flex-col sm:flex-row gap-3">
+                         <a href="{{ results.otsu.img_path }}" download class="btn btn-secondary w-full">
+                            <i data-lucide="image-down"></i> Tải PNG
+                         </a>
+                         <a href="/download/results/{{ results.otsu.csv_file }}" class="btn bg-purple-600 hover:bg-purple-700 text-white w-full">
+                            <i data-lucide="file-spreadsheet"></i> Tải CSV
+                         </a>
+                     </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <script>
+        // Khởi tạo thư viện icon Lucide
+        lucide.createIcons();
+
+        const fileUpload = document.getElementById('file-upload');
+        const dropZone = document.getElementById('drop-zone');
+        const dropZoneContent = document.getElementById('drop-zone-content');
+
+        if (fileUpload) {
+            fileUpload.addEventListener('change', (event) => {
+                const files = event.target.files;
+                if (files && files[0]) {
+                    displayPreview(files[0]);
+                }
+            });
+        }
+
+        function displayPreview(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                dropZoneContent.innerHTML = `<img src="${e.target.result}" alt="Image preview" class="max-h-28 rounded-lg object-contain p-2">`;
+            }
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>
